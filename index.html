@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NixelOS</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --text: #c9d1d9;
+      --heading: #f0f6fc;
+      --muted: #8b949e;
+      --border: #30363d;
+      --link: #58a6ff;
+      --code-bg: #161b22;
+      --inline-code-bg: #1f242c;
+      --table-border: #30363d;
+      --blockquote: #8b949e;
+      --header-bg: #0d1117;
+    }
+
+    [data-theme="light"] {
+      --bg: #ffffff;
+      --card-bg: #f6f8fa;
+      --text: #24292f;
+      --heading: #1f2328;
+      --muted: #57606a;
+      --border: #d0d7de;
+      --link: #0969da;
+      --code-bg: #f6f8fa;
+      --inline-code-bg: #eff1f3;
+      --table-border: #d0d7de;
+      --blockquote: #57606a;
+      --header-bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+    }
+
+    .topbar-content {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+
+    .repo-info a {
+      color: var(--heading);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .repo-info a:hover {
+      text-decoration: underline;
+    }
+
+    .repo-info .branch {
+      color: var(--muted);
+      margin-left: 0.35rem;
+      font-size: 0.75rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.2rem 0.55rem;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: var(--card-bg);
+      color: var(--heading);
+    }
+
+    /* Status banner */
+    .banner {
+      max-width: 820px;
+      margin: 1.25rem auto 0;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      display: none;
+      font-family: ui-monospace, monospace;
+    }
+
+    .banner.fallback {
+      display: block;
+      background: rgba(210, 153, 34, 0.15);
+      border: 1px solid rgba(210, 153, 34, 0.4);
+      color: #e3b341;
+    }
+
+    .banner.loading {
+      display: block;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* Markdown Container */
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 4rem 1rem;
+    }
+
+    /* Rendered Markdown Styling */
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
+      color: var(--heading);
+      font-weight: 600;
+      margin-top: 1.6rem;
+      margin-bottom: 0.75rem;
+      line-height: 1.25;
+    }
+
+    .markdown-body h1 {
+      font-size: 1.85rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3rem;
+    }
+
+    .markdown-body h2 {
+      font-size: 1.35rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.25rem;
+    }
+
+    .markdown-body h3 { font-size: 1.15rem; }
+    .markdown-body h4 { font-size: 1rem; }
+
+    .markdown-body p,
+    .markdown-body ul,
+    .markdown-body ol,
+    .markdown-body table,
+    .markdown-body pre,
+    .markdown-body blockquote {
+      margin-bottom: 1rem;
+    }
+
+    .markdown-body a {
+      color: var(--link);
+      text-decoration: none;
+    }
+
+    .markdown-body a:hover {
+      text-decoration: underline;
+    }
+
+    .markdown-body ul,
+    .markdown-body ol {
+      padding-left: 1.75rem;
+    }
+
+    .markdown-body li {
+      margin-bottom: 0.25rem;
+    }
+
+    .markdown-body code {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 85%;
+      background: var(--inline-code-bg);
+      border: 1px solid var(--border);
+      padding: 0.15em 0.35em;
+      border-radius: 4px;
+    }
+
+    .markdown-body pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.85rem 1rem;
+      overflow-x: auto;
+      line-height: 1.45;
+    }
+
+    .markdown-body pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-size: 0.85rem;
+      color: inherit;
+    }
+
+    .markdown-body blockquote {
+      border-left: 3px solid var(--border);
+      padding-left: 1rem;
+      color: var(--blockquote);
+    }
+
+    .markdown-body hr {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 1.75rem 0;
+    }
+
+    .markdown-body table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .markdown-body th,
+    .markdown-body td {
+      border: 1px solid var(--table-border);
+      padding: 0.45rem 0.85rem;
+      text-align: left;
+    }
+
+    .markdown-body th {
+      background: var(--card-bg);
+      font-weight: 600;
+      color: var(--heading);
+    }
+
+    .markdown-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    /* Footer */
+    footer {
+      max-width: 820px;
+      margin: 2rem auto 0;
+      border-top: 1px solid var(--border);
+      padding-top: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-family: ui-monospace, monospace;
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--link);
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-content">
+      <div class="repo-info">
+        <a href="https://github.com/NixelSoftware/NixelOS" target="_blank" rel="noreferrer">NixelSoftware / NixelOS</a>
+        <span class="branch">:main/README.md</span>
+      </div>
+      <div class="actions">
+        <button class="btn" id="refresh-btn" onclick="loadReadme()">Refresh</button>
+        <button class="btn" id="theme-btn" onclick="toggleTheme()">Theme</button>
+        <a class="btn" href="https://github.com/NixelSoftware/NixelOS" target="_blank" rel="noreferrer">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <div id="status-banner" class="banner"></div>
+
+  <main class="container">
+    <article id="content" class="markdown-body">
+      <!-- Rendered README goes here -->
+    </article>
+
+    <footer>
+      <div>Rendered from README.md</div>
+      <div>
+        <a href="https://github.com/NixelSoftware/NixelOS" target="_blank" rel="noreferrer">NixelSoftware/NixelOS</a>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const README_URL = 'https://raw.githubusercontent.com/NixelSoftware/NixelOS/refs/heads/main/README.md';
+
+    // Offline fallback markdown in case GitHub raw is unavailable, blocked by CORS, or offline
+    const FALLBACK_MARKDOWN = `# NixelOS
+
+A 32-bit x86 monolithic operating system written from scratch in C and Assembly.
+
+NixelOS does not run on top of Linux and does not use GRUB. It boots directly through a custom two-stage MBR bootloader into 32-bit protected mode, configures higher-half virtual memory paging, initializes hardware peripherals, and provides an interactive userspace shell.
+
+---
+
+## Features
+
+- **Architecture:** 32-bit Protected Mode (i686), higher-half kernel mapped at \`0xC0000000\`.
+- **Bootloader:** Custom 2-stage NASM bootloader utilizing INT 13h extensions and E820 physical memory probing.
+- **Memory Management:** Physical page frame allocator and dynamic kernel heap (slab allocator).
+- **Graphics:** Linear VBE framebuffer (800x600 32bpp) with double-buffering, custom font renderer, and desktop windowing.
+- **Filesystem:** Custom Virtual File System (VFS) with support for ATA PIO, SFS, and FAT32.
+- **Networking:** RTL8139 PCI driver with ARP, IPv4, UDP, and lightweight TCP socket support.
+- **Userspace:** Command shell, text editor, file manager, system fetch utility, and built-in \`QuarkServe\` static web daemon.
+
+---
+
+## Building and Running
+
+### Prerequisites
+
+- \`i686-elf-gcc\` (or \`gcc\` with \`-m32 -ffreestanding\`)
+- \`nasm\`
+- \`GNU make\` and \`ld\`
+- \`qemu-system-i386\`
+- \`mtools\` & \`xorriso\` (for ISO generation)
+
+### Quick Start
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/NixelSoftware/NixelOS.git
+cd NixelOS
+
+# Compile bootloader and kernel
+make clean all
+
+# Run in QEMU emulator
+make qemu
+\`\`\`
+
+To test networking (RTL8139 emulation):
+
+\`\`\`bash
+make qemu-net
+\`\`\`
+
+---
+
+## License
+
+NixelOS is an open-source hobby project distributed under the MIT License.`;
+
+    const statusBanner = document.getElementById('status-banner');
+    const contentEl = document.getElementById('content');
+
+    function renderMarkdown(mdText) {
+      if (typeof marked !== 'undefined' && marked.parse) {
+        // Configure options for clean output
+        marked.setOptions({
+          gfm: true,
+          breaks: true
+        });
+        contentEl.innerHTML = marked.parse(mdText);
+      } else {
+        contentEl.innerHTML = '<pre>' + escapeHtml(mdText) + '</pre>';
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    async function loadReadme() {
+      statusBanner.className = 'banner loading';
+      statusBanner.textContent = 'Fetching latest README.md from GitHub...';
+      contentEl.style.opacity = '0.5';
+
+      try {
+        // Append cache-buster timestamp to ensure up-to-date raw content
+        const res = await fetch(README_URL + '?t=' + Date.now());
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+        const text = await res.text();
+        statusBanner.className = 'banner';
+        statusBanner.style.display = 'none';
+        renderMarkdown(text);
+      } catch (err) {
+        console.warn('Could not fetch live README.md, loading fallback:', err);
+        statusBanner.className = 'banner fallback';
+        statusBanner.textContent = 'Unable to reach raw.githubusercontent.com — displaying cached README.md';
+        renderMarkdown(FALLBACK_MARKDOWN);
+      } finally {
+        contentEl.style.opacity = '1';
+      }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('nixel_theme', next);
+    }
+
+    // Initialize preferred theme
+    (function initTheme() {
+      const saved = localStorage.getItem('nixel_theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+
+    // Initial fetch
+    loadReadme();
+  </script>
+</body>
+</html>
